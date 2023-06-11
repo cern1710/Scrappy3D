@@ -238,7 +238,7 @@ function allTests(dir = "tests") {
 }
 const test_objects = allTests();
 
-const Scotty3D_objects = [
+const Scrappy3D_objects = [
 	...gui_objects,
 	...geom_objects,
 	...rasterizer_objects,
@@ -259,40 +259,40 @@ const Scotty3D_objects = [
 // exeFileBase: name of executable file to produce
 // returns exeFile: exeFileBase + a platform-dependant suffix (e.g., '.exe' on windows)
 
-const Scotty3D_options = {};
+const Scrappy3D_options = {};
 if (maek.OS === 'linux') {
-	Scotty3D_options.LINKLibs = [...maek.options.LINKLibs,
+	Scrappy3D_options.LINKLibs = [...maek.options.LINKLibs,
 		`-L${NEST_LIBS}/SDL2/lib`, `-lSDL2`, `-lm`, `-ldl`, `-lasound`, `-lpthread`, `-lX11`, `-lXext`, `-lpthread`, `-lrt`, `-lGL`,
 		"-L/usr/lib/x86_64-linux-gnu/", "-lgtk-3", "-lgobject-2.0", "-lglib-2.0", "-ldl",
 		"-pthread",
 	];
 } else if (maek.OS === 'macos') {
-	Scotty3D_options.LINKLibs = [...maek.options.LINKLibs,
+	Scrappy3D_options.LINKLibs = [...maek.options.LINKLibs,
 		`-L${NEST_LIBS}/SDL2/lib`, `-lSDL2`, `-lm`,`-liconv`, `-framework`, `CoreAudio`, `-framework`, `AudioToolbox`, `-weak_framework`, `CoreHaptics`, `-weak_framework`, `GameController`, `-framework`, `ForceFeedback`, `-lobjc`, `-framework`, `CoreVideo`, `-framework`, `Cocoa`, `-framework`, `Carbon`, `-framework`, `IOKit`, `-framework`, `OpenGL`,
 		"-framework", "Foundation",
 		"-framework", "AppKit",
 	];
 } else if (maek.OS === 'windows') {
-	Scotty3D_options.LINKLibs = [...maek.options.LINKLibs,
+	Scrappy3D_options.LINKLibs = [...maek.options.LINKLibs,
 		`/LIBPATH:${NEST_LIBS}/SDL2/lib`, `SDL2main.lib`, `SDL2.lib`, `OpenGL32.lib`, `Shell32.lib`, //needed for SDL
 		"Ole32.lib", "Shcore.lib", //needed for NFD
 		"src/platform/icon.res",
 	];
 }
 
-//make Scotty3D executable also depend on copying the correct dynamic libraries and readme file from the nest-libs package:
-Scotty3D_options.depends = [...copies];
+//make Scrappy3D executable also depend on copying the correct dynamic libraries and readme file from the nest-libs package:
+Scrappy3D_options.depends = [...copies];
 
 
-const Scotty3D_exe = maek.LINK(Scotty3D_objects, 'Scrappy3D', Scotty3D_options);
+const Scrappy3D_exe = maek.LINK(Scrappy3D_objects, 'Scrappy3D', Scrappy3D_options);
 
 //the '[targets =] RULE(targets, prerequisites[, recipe])' rule defines a Makefile-style task
 // targets: array of targets the task produces (can include both files and ':abstract targets')
 // prerequisites: array of targets the task waits on (can include both files and ':abstract targets')
 // recipe (optional): array of commands to run (where each command is an array [exe, arg1, arg0, ...])
 //returns targets: the targets the rule produces
-maek.RULE([':test'], [Scotty3D_exe], [
-	['./' + Scotty3D_exe, '--run-tests']
+maek.RULE([':test'], [Scrappy3D_exe], [
+	['./' + Scrappy3D_exe, '--run-tests']
 ]);
 
 
