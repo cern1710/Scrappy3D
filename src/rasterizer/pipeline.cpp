@@ -360,43 +360,67 @@ void Pipeline< p, P, flags >::rasterize_line(
 		assert(0 && "rasterize_line should only be invoked in flat interpolation mode.");
 	}
 
-	// Bresenham's line algorithm
-    int y0 = static_cast<int>(round(va.fb_position.y));
-    int x0 = static_cast<int>(round(va.fb_position.x));
-    int x1 = static_cast<int>(round(vb.fb_position.x));
-    int y1 = static_cast<int>(round(vb.fb_position.y));
+	float x0 = va.fb_position.x;
+	float y0 = va.fb_position.y;
+	float x1 = vb.fb_position.x;
+	float y1 = vb.fb_position.y;
+	float z0 = va.fb_position.z;
+	float z1 = vb.fb_position.z;
 
-    int dx = std::abs(x1 - x0);
-    int dy = std::abs(y1 - y0);
-    int err = dx - dy;
+    float dx = x1 - x0;
+    float dy = y1 - y0;
+	float dz = z1 - z0;
 
-    int sx = (x0 < x1) ? 1 : -1;
-    int sy = (y0 < y1) ? 1 : -1;
+	bool steep = std::abs(dy) > std::abs(dx);
 
-    while (true) {
-        if (x0 == x1 && y0 == y1) {
-            break;
-        }
+	if (steep) {
+		float temp = x0;
+		x0 = y0;
+		y0 = temp;
 
-        Fragment frag;
-        frag.fb_position.x = x0 + 0.5f;
-        frag.fb_position.y = y0 + 0.5f;
-        float t = std::max(std::abs(x0 - va.fb_position.x), std::abs(y0 - va.fb_position.y)) /
-                    (std::max(dx, dy) + 1e-7f);	// avoid division by zero
-        frag.fb_position.z = (1 - t) * va.fb_position.z + t * vb.fb_position.z;
+		temp = x1;
+		x1 = y1;
+		y1 = temp;
 
+		temp = dx;
+		dx = dy;
+		dy = temp;
+	}
+
+	if (x0 > x1) {
+		float temp = x0;
+		x0 = x1;
+		x1 = temp;
+
+		temp = y0;
+		y0 = y1;
+		y1 = temp;
+
+		temp = z0;
+		z0 = z1;
+		z1 = temp;
+	}
+
+	// move thru the line
+	for (float x = x0; x < x1; x++) {
+		float t = (x - x0) / dx;
+		float y = y0 + dy * t;
+		float z = z0 + dz * t;
+
+		Fragment frag;
+		if (steep) {
+			frag.fb_position.x = std::round(y) + 0.5f;
+			frag.fb_position.y = std::round(x) + 0.5f;
+		} else {
+			frag.fb_position.x = std::round(x) + 0.5f;
+			frag.fb_position.y = std::round(y) + 0.5f;			
+		}
+		frag.fb_position.z = z;
 		frag.attributes = va.attributes;
-        frag.derivatives.fill(Vec2(0.0f, 0.0f));
-        emit_fragment(frag);
+		frag.derivatives.fill(Vec2(0.0f, 0.0f));
 
-		int e2 = 2 * err;
-        if (e2 > -dy) {
-            err -= dy; x0 += sx;
-        }
-        if (e2 < dx) {
-            err += dx; y0 += sy;
-        }
-    }
+		emit_fragment(frag);
+	}
 }
 
 
