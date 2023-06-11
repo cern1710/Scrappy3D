@@ -361,36 +361,39 @@ void Pipeline< p, P, flags >::rasterize_line(
 	}
 
 	// Bresenham's line algorithm
-    int x0 = static_cast<int>(round(va.fb_position.x));
     int y0 = static_cast<int>(round(va.fb_position.y));
+    int x0 = static_cast<int>(round(va.fb_position.x));
     int x1 = static_cast<int>(round(vb.fb_position.x));
     int y1 = static_cast<int>(round(vb.fb_position.y));
 
     int dx = std::abs(x1 - x0);
     int dy = std::abs(y1 - y0);
-    int err = dx + dy;
+    int err = dx - dy;
 
     int sx = (x0 < x1) ? 1 : -1;
     int sy = (y0 < y1) ? 1 : -1;
 
     while (true) {
-		int e2 = 2 * err;
-        Fragment frag;
-		frag.attributes = va.attributes;
-        frag.derivatives.fill(Vec2(0.0f, 0.0f));
         if (x0 == x1 && y0 == y1) {
             break;
         }
+
+        Fragment frag;
         frag.fb_position.x = x0 + 0.5f;
         frag.fb_position.y = y0 + 0.5f;
+        float t = std::max(std::abs(x0 - va.fb_position.x), std::abs(y0 - va.fb_position.y)) /
+                    (std::max(dx, dy) + 1e-7f);	// avoid division by zero
+        frag.fb_position.z = (1 - t) * va.fb_position.z + t * vb.fb_position.z;
 
+		frag.attributes = va.attributes;
+        frag.derivatives.fill(Vec2(0.0f, 0.0f));
         emit_fragment(frag);
-        if (e2 >= -dy) {
-			if (x0 == x1) break;
-            err += dy; x0 += sx;
+
+		int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy; x0 += sx;
         }
         if (e2 < dx) {
-			if (y0 == y1) break;
             err += dx; y0 += sy;
         }
     }
