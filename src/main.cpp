@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 	std::string write_file = ""; //write file (useful for conversions)
 
 
-	CLI::App args{"Scotty3D - Student Version"};
+	CLI::App args{"Scrappy3D - Student Version"};
 
 	auto tests_option = args.add_option("--run-tests", tests_prefix, "Run all tests starting with prefix", true);
 	tests_option->expected(0, 1);
