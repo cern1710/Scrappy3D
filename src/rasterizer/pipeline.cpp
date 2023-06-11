@@ -359,20 +359,41 @@ void Pipeline< p, P, flags >::rasterize_line(
 	if constexpr ((flags & PipelineMask_Interp) != Pipeline_Interp_Flat) {
 		assert(0 && "rasterize_line should only be invoked in flat interpolation mode.");
 	}
-	//A1T2: rasterize_line
 
-	//TODO: Check out the block comment above this function for more information on how to fill in this function!
-	// 		The OpenGL specification section 3.5 may also come in handy.
+	// Bresenham's line algorithm
+    int x0 = static_cast<int>(round(va.fb_position.x));
+    int y0 = static_cast<int>(round(va.fb_position.y));
+    int x1 = static_cast<int>(round(vb.fb_position.x));
+    int y1 = static_cast<int>(round(vb.fb_position.y));
 
-	{ //As a placeholder, draw a point in the middle of the line:
-		//(remove this code once you have a real implementation)
-		Fragment mid;
-		mid.fb_position = (va.fb_position + vb.fb_position) / 2.0f;
-		mid.attributes = va.attributes;
-		mid.derivatives.fill(Vec2(0.0f, 0.0f));
-		emit_fragment(mid);
-	}
+    int dx = std::abs(x1 - x0);
+    int dy = std::abs(y1 - y0);
+    int err = dx + dy;
 
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+
+    while (true) {
+		int e2 = 2 * err;
+        Fragment frag;
+		frag.attributes = va.attributes;
+        frag.derivatives.fill(Vec2(0.0f, 0.0f));
+        if (x0 == x1 && y0 == y1) {
+            break;
+        }
+        frag.fb_position.x = x0 + 0.5f;
+        frag.fb_position.y = y0 + 0.5f;
+
+        emit_fragment(frag);
+        if (e2 >= -dy) {
+			if (x0 == x1) break;
+            err += dy; x0 += sx;
+        }
+        if (e2 < dx) {
+			if (y0 == y1) break;
+            err += dx; y0 += sy;
+        }
+    }
 }
 
 
