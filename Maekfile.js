@@ -20,7 +20,7 @@ const maek = init_maek();
 //Read onward to discover how to configure Maek for your build!
 
 //set default targets to build (can be overridden by command line options):
-maek.TARGETS = ["Scotty3D" + (maek.OS === "windows" ? ".exe" : "")];
+maek.TARGETS = ["Scrappy3D" + (maek.OS === "windows" ? ".exe" : "")];
 
 //we use a prebuilt library package:
 const NEST_LIBS = `nest-libs/${maek.OS}`;
@@ -284,7 +284,7 @@ if (maek.OS === 'linux') {
 Scotty3D_options.depends = [...copies];
 
 
-const Scotty3D_exe = maek.LINK(Scotty3D_objects, 'Scotty3D', Scotty3D_options);
+const Scotty3D_exe = maek.LINK(Scotty3D_objects, 'Scrappy3D', Scotty3D_options);
 
 //the '[targets =] RULE(targets, prerequisites[, recipe])' rule defines a Makefile-style task
 // targets: array of targets the task produces (can include both files and ':abstract targets')
