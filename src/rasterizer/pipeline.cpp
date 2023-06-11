@@ -360,15 +360,15 @@ void Pipeline< p, P, flags >::rasterize_line(
 		assert(0 && "rasterize_line should only be invoked in flat interpolation mode.");
 	}
 
+	// Bresenham's algorithm
 	float x0 = std::round(va.fb_position.x) + 0.5f;
 	float y0 = std::round(va.fb_position.y) + 0.5f;
 	float x1 = std::round(vb.fb_position.x) + 0.5f;
 	float y1 = std::round(vb.fb_position.y) + 0.5f;
-	float z0 = va.fb_position.z;
-	float z1 = vb.fb_position.z;
-
     float dx = va.fb_position.x - vb.fb_position.x;
     float dy = va.fb_position.y - vb.fb_position.y;
+	float z0 = va.fb_position.z;
+	float z1 = vb.fb_position.z;
 	float dz = z1 - z0;
 	bool steep = std::abs(dy) > std::abs(dx);
 
@@ -401,9 +401,9 @@ void Pipeline< p, P, flags >::rasterize_line(
 		frag.attributes = va.attributes;
 		frag.derivatives.fill(Vec2(0.0f, 0.0f));
 
-		if (dx == 0 || dy == 0 ||
-				std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5 ||
-				std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5)
+		// diamond-exit or if slope = (0 or infinity)
+		if (std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5 || dx == 0 || 
+				std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5 || dy == 0)
 			emit_fragment(frag);
 	}
 }
