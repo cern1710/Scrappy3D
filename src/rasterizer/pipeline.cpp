@@ -370,35 +370,17 @@ void Pipeline< p, P, flags >::rasterize_line(
     float dx = x1 - x0;
     float dy = y1 - y0;
 	float dz = z1 - z0;
-
 	bool steep = std::abs(dy) > std::abs(dx);
 
 	if (steep) {
-		float temp = x0;
-		x0 = y0;
-		y0 = temp;
-
-		temp = x1;
-		x1 = y1;
-		y1 = temp;
-
-		temp = dx;
-		dx = dy;
-		dy = temp;
+		std::swap(x0, y0);
+		std::swap(x1, y1);
+		std::swap(dx, dy);
 	}
-
 	if (x0 > x1) {
-		float temp = x0;
-		x0 = x1;
-		x1 = temp;
-
-		temp = y0;
-		y0 = y1;
-		y1 = temp;
-
-		temp = z0;
-		z0 = z1;
-		z1 = temp;
+		std::swap(x0, x1);
+		std::swap(y0, y1);
+		std::swap(z0, z1);
 	}
 
 	// move through the line
@@ -419,9 +401,8 @@ void Pipeline< p, P, flags >::rasterize_line(
 		frag.attributes = va.attributes;
 		frag.derivatives.fill(Vec2(0.0f, 0.0f));
 
-		if (dx == 0 || dy == 0)
-			emit_fragment(frag);
-		else if ((std::abs(frag.fb_position.x-x-0.5f) + std::abs(frag.fb_position.y-y-0.5f)) < 0.5f)
+		if (dx == 0 || dy == 0 ||
+			(std::abs(frag.fb_position.x-x-0.5f) + std::abs(frag.fb_position.y-y-0.5f)) < 0.5f)
 			emit_fragment(frag);
 	}
 }

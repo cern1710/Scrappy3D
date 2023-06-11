@@ -87,7 +87,7 @@
 				"material":"lam_white",
 				"visible":true,
 				"collides":true,
-				"style":"Flat"
+				"style":"Wireframe"
 			},
 			"Mesh Instance 1":{
 				"transform":"Transform 1",
@@ -95,7 +95,7 @@
 				"material":"lam_white",
 				"visible":true,
 				"collides":true,
-				"style":"Smooth"
+				"style":"Wireframe"
 			},
 			"Mesh Instance 2":{
 				"transform":"Transform 2",
@@ -103,7 +103,7 @@
 				"material":"lam_white",
 				"visible":true,
 				"collides":true,
-				"style":"Correct"
+				"style":"Wireframe"
 			}
 		},
 		"skinned_meshes":{},
