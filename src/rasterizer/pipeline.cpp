@@ -367,8 +367,8 @@ void Pipeline< p, P, flags >::rasterize_line(
 	float z0 = va.fb_position.z;
 	float z1 = vb.fb_position.z;
 
-    float dx = x1 - x0;
-    float dy = y1 - y0;
+    float dx = va.fb_position.x - vb.fb_position.x;
+    float dy = va.fb_position.y - vb.fb_position.y;
 	float dz = z1 - z0;
 	bool steep = std::abs(dy) > std::abs(dx);
 
@@ -402,8 +402,8 @@ void Pipeline< p, P, flags >::rasterize_line(
 		frag.derivatives.fill(Vec2(0.0f, 0.0f));
 
 		if (dx == 0 || dy == 0 ||
-				std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5f ||
-				std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5f)
+				std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5 ||
+				std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5)
 			emit_fragment(frag);
 	}
 }
