@@ -2,6 +2,10 @@
 
 Scrappy3D is a 3D modeling, rendering, and animation package based on [15-462/662 Computer Graphics](http://15462.courses.cs.cmu.edu) at Carnegie Mellon University.
 
+## Disclaimer
+
+This is merely for educational purposes and is not intended to be used as reference. The repo has been intentionally renamed to make it harder to find.
+
 ## General Setup
 
 1. Install a C++ compiler:
@@ -63,15 +67,3 @@ You are probably building from a shell with the developer tools set to target x8
 
 You are probably not building from a command prompt that has your compiler (cl.exe) available. Make sure that you are using **x64 Native Tools Command Prompt for VS 2022** (or run the proper `vcvars.bat` from whatever shell you happen to be using). If the error still shows up, run `cl.exe` from the prompt to check that it is indeed working. If not, your visual studio install might have been set up incorrectly.
 
-## Updating
-When switching to a new assignment, you should `git pull sourcerepo main` to obtain the latest handout version, resolve conflicts, and try building Scrappy3D before starting the new assignment. Some build issues might occur:
-
-> `duplicate symbols for architecture x86_64`
-
-This is likely because you have declared a helper function in a file `A.cpp` that is included in a different file `B.cpp`. When linking, your helper function appears in both `A.o` and `B.o`, which is typically not allowed as the error suggests. To avoid this, declare your helper function as `static` or `inline` to tell the linker it is okay to have it appear multiple times in different object files. More detail:
-
-* `static` means “internal linkage” (function name isn’t exported by the object file) - See [reference](https://en.cppreference.com/w/cpp/language/storage_duration)
-* `inline` means “okay to have multiple [identical] definitions” (function name is exported but linker will ignore one of them) - See [reference](https://en.cppreference.com/w/cpp/language/inline)
-
-## Useful Resources
-More info about Scrappy3D can be found in the [User Guide](https://cmu-graphics.github.io/Scrappy3D-docs/guide/) (and again, `Maekfile.js`!). We will also post on [Piazza](https://piazza.com/class/l7euxsj4kf4ht/) if there's an update you should be aware of. Make sure you have access to these, and don't hesitate to ask questions!
