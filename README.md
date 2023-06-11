@@ -4,7 +4,7 @@ Scrappy3D is a 3D modeling, rendering, and animation package based on [15-462/66
 
 ## Disclaimer
 
-This is merely for educational purposes and is not intended to be used as reference. The repo has been intentionally renamed to avoid plagiarism.
+This is merely for educational purposes and is not intended to be used as reference. The repo has been intentionally renamed to prevent plagiarism.
 
 ## General Setup
 
