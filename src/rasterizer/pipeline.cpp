@@ -402,7 +402,8 @@ void Pipeline< p, P, flags >::rasterize_line(
 		frag.derivatives.fill(Vec2(0.0f, 0.0f));
 
 		if (dx == 0 || dy == 0 ||
-			(std::abs(frag.fb_position.x-x-0.5f) + std::abs(frag.fb_position.y-y-0.5f)) < 0.5f)
+				std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5f ||
+				std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5f)
 			emit_fragment(frag);
 	}
 }
