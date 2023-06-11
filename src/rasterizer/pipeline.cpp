@@ -360,10 +360,10 @@ void Pipeline< p, P, flags >::rasterize_line(
 		assert(0 && "rasterize_line should only be invoked in flat interpolation mode.");
 	}
 
-	float x0 = va.fb_position.x;
-	float y0 = va.fb_position.y;
-	float x1 = vb.fb_position.x;
-	float y1 = vb.fb_position.y;
+	float x0 = std::round(va.fb_position.x) + 0.5f;
+	float y0 = std::round(va.fb_position.y) + 0.5f;
+	float x1 = std::round(vb.fb_position.x) + 0.5f;
+	float y1 = std::round(vb.fb_position.y) + 0.5f;
 	float z0 = va.fb_position.z;
 	float z1 = vb.fb_position.z;
 
@@ -401,7 +401,7 @@ void Pipeline< p, P, flags >::rasterize_line(
 		z1 = temp;
 	}
 
-	// move thru the line
+	// move through the line
 	for (float x = x0; x < x1; x++) {
 		float t = (x - x0) / dx;
 		float y = y0 + dy * t;
@@ -409,17 +409,20 @@ void Pipeline< p, P, flags >::rasterize_line(
 
 		Fragment frag;
 		if (steep) {
-			frag.fb_position.x = std::round(y) + 0.5f;
-			frag.fb_position.y = std::round(x) + 0.5f;
+			frag.fb_position.x = y;
+			frag.fb_position.y = x;
 		} else {
-			frag.fb_position.x = std::round(x) + 0.5f;
-			frag.fb_position.y = std::round(y) + 0.5f;			
+			frag.fb_position.x = x;
+			frag.fb_position.y = y;			
 		}
 		frag.fb_position.z = z;
 		frag.attributes = va.attributes;
 		frag.derivatives.fill(Vec2(0.0f, 0.0f));
 
-		emit_fragment(frag);
+		if (dx == 0 || dy == 0)
+			emit_fragment(frag);
+		else if ((std::abs(frag.fb_position.x-x-0.5f) + std::abs(frag.fb_position.y-y-0.5f)) < 0.5f)
+			emit_fragment(frag);
 	}
 }
 
