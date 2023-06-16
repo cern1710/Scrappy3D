@@ -463,33 +463,32 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		// sort vertices such that v1 < v2 < v3
 		std::array<ClippedVertex, 3> vertices = {va, vb, vc};
 		std::sort(vertices.begin(), vertices.end(), [](const ClippedVertex& a, const ClippedVertex& b) {
-			return a.fb_position.y < b.fb_position.y;
+			return a.fb_position.y < b.fb_position.y || (a.fb_position.y == b.fb_position.y && a.fb_position.x < b.fb_position.x);
 		});
-
 		ClippedVertex& v1 = vertices[0];
 		ClippedVertex& v2 = vertices[1];
 		ClippedVertex& v3 = vertices[2];
 		float slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
 		float slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
 		float slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
+		float y = v1.fb_position.y;
 
-        for (float y = v1.fb_position.y; y < v2.fb_position.y; y++) {
-			ClippedVertex a = v1, b = v1;
-			a.fb_position.x += (y - v1.fb_position.y) * slope1;
-			b.fb_position.x += (y - v1.fb_position.y) * slope2;
-
-            if (a.fb_position.x > b.fb_position.x) 
-                std::swap(a, b);
-            Pipeline< PrimitiveType::Lines, P, flags >::rasterize_line(a, b, emit_fragment);
+		for (; y <= v2.fb_position.y; y++) {
+			ClippedVertex a = v1, b = v2;
+			a.fb_position.x += (y - v1.fb_position.y) * slope2;
+			b.fb_position.x += (y - v2.fb_position.y) * slope1;
+			// if (y == v2.fb_position.y) a = v2;
+			if (a.fb_position.x > b.fb_position.x) std::swap(a, b);
+			Pipeline< PrimitiveType::Lines, P, flags>::rasterize_line(a, b, emit_fragment);
 		}
-		for (float y = v2.fb_position.y; y <= v3.fb_position.y; y++) {
-			ClippedVertex a = v2, b = v1;
-			a.fb_position.x += (y - v2.fb_position.y) * slope3;
-			b.fb_position.x += (y - v1.fb_position.y) * slope2;
 
-            if (a.fb_position.x > b.fb_position.x) 
-                std::swap(a, b);
-            Pipeline< PrimitiveType::Lines, P, flags >::rasterize_line(a, b, emit_fragment);
+		for (; y <= v3.fb_position.y; y++) {
+			ClippedVertex a = v2, b = v3;
+			a.fb_position.x += (y - v2.fb_position.y) * slope3;
+			b.fb_position.x += (y - v3.fb_position.y) * slope2;
+			// if (y == v3.fb_position.y) a = v3;
+			if (a.fb_position.x > b.fb_position.x) std::swap(a, b);
+			Pipeline< PrimitiveType::Lines, P, flags>::rasterize_line(a, b, emit_fragment);
 		}
 	} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Screen) {
 		//A1T5: screen-space smooth triangles
