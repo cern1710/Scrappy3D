@@ -468,13 +468,26 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		ClippedVertex& v1 = vertices[0];
 		ClippedVertex& v2 = vertices[1];
 		ClippedVertex& v3 = vertices[2];
-		float slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
-		float slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
-		float slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
+		ClippedVertex a, b;
+
+		float slope1, slope2, slope3;
+		if (v2.fb_position.y == v1.fb_position.y) { // flat bottom
+			slope1 = 0;
+			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
+			slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
+		} else if (v3.fb_position.y == v2.fb_position.y) { // flat top
+			slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
+			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
+			slope3 = 0;
+		} else { // general case
+			slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
+			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
+			slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
+		}
 		float y = v1.fb_position.y;
 
 		for (; y <= v2.fb_position.y; y++) {
-			ClippedVertex a = v1, b = v2;
+			a = v1, b = v2;
 			a.fb_position.x += (y - v1.fb_position.y) * slope2;
 			b.fb_position.x += (y - v2.fb_position.y) * slope1;
 			// if (y == v2.fb_position.y) a = v2;
@@ -483,7 +496,7 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		}
 
 		for (; y <= v3.fb_position.y; y++) {
-			ClippedVertex a = v2, b = v3;
+			a = v2, b = v3;
 			a.fb_position.x += (y - v2.fb_position.y) * slope3;
 			b.fb_position.x += (y - v3.fb_position.y) * slope2;
 			// if (y == v3.fb_position.y) a = v3;
