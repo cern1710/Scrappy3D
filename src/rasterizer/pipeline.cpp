@@ -365,8 +365,8 @@ void Pipeline< p, P, flags >::rasterize_line(
 	float y0 = std::round(va.fb_position.y) + 0.5f;
 	float x1 = std::round(vb.fb_position.x) + 0.5f;
 	float y1 = std::round(vb.fb_position.y) + 0.5f;
-    float dx = va.fb_position.x - vb.fb_position.x;
-    float dy = va.fb_position.y - vb.fb_position.y;
+    float dx = x0-x1;
+    float dy = y0-y1;
 	float z0 = va.fb_position.z;
 	float z1 = vb.fb_position.z;
 	float dz = z1 - z0;
@@ -405,6 +405,11 @@ void Pipeline< p, P, flags >::rasterize_line(
 		if (std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5 || dx == 0 || 
 				std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5 || dy == 0)
 			emit_fragment(frag);
+
+		// emit fragment only if it is on the top or left of a triangle
+		// if (((std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) <= 0.5) && (dy >= 0)) || 
+		// 		((std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) <= 0.5) && (dx <= 0)))
+		// 	emit_fragment(frag);
 	}
 }
 
@@ -475,11 +480,13 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 			slope1 = 0;
 			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
 			slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
-		} else if (v3.fb_position.y == v2.fb_position.y) { // flat top
+		} 
+		else if (v3.fb_position.y == v2.fb_position.y) { // flat top
 			slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
 			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
 			slope3 = 0;
-		} else { // general case
+		} 
+		else { // general case
 			slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
 			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
 			slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
@@ -490,17 +497,19 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 			a = v1, b = v2;
 			a.fb_position.x += (y - v1.fb_position.y) * slope2;
 			b.fb_position.x += (y - v2.fb_position.y) * slope1;
-			// if (y == v2.fb_position.y) a = v2;
 			if (a.fb_position.x > b.fb_position.x) std::swap(a, b);
 			Pipeline< PrimitiveType::Lines, P, flags>::rasterize_line(a, b, emit_fragment);
 		}
-
+		// if (v2.fb_position.y != std::floor(v2.fb_position.y)) {
+		// 	y = v2.fb_position.y;
+		// }
 		for (; y <= v3.fb_position.y; y++) {
 			a = v2, b = v3;
 			a.fb_position.x += (y - v2.fb_position.y) * slope3;
 			b.fb_position.x += (y - v3.fb_position.y) * slope2;
-			// if (y == v3.fb_position.y) a = v3;
 			if (a.fb_position.x > b.fb_position.x) std::swap(a, b);
+			// std::cout << "\nA: (" << a.fb_position.x << ", " << a.fb_position.y << ")\n";
+			// std::cout << "B: (" << b.fb_position.x << ", " << b.fb_position.y << ")\n";
 			Pipeline< PrimitiveType::Lines, P, flags>::rasterize_line(a, b, emit_fragment);
 		}
 	} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Screen) {
