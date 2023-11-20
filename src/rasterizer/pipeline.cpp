@@ -185,7 +185,7 @@ void Pipeline< primitive_type, Program, flags >::run(
 		}
 	}
 
-	
+
 
 }
 
@@ -209,7 +209,7 @@ auto Pipeline< p, P, F >::lerp(ShadedVertex const &a, ShadedVertex const &b, flo
  *  emit_vertex: call to produce truncated line
  *
  * If clipping shortens the line, attributes of the shortened line should respect the pipeline's interpolation mode.
- * 
+ *
  * If no portion of the line remains after clipping, emit_vertex will not be called.
  *
  * The clipped line should have the same direction as the full line.
@@ -230,7 +230,7 @@ void Pipeline< p, P, flags >::clip_line(
 
 	float min_t = 0.0f;
 	float max_t = 1.0f;
-	
+
 	// want to set range of t for a bunch of equations like:
 	//    a.x + t * ba.x <= a.w + t * ba.w
 	// so here's a helper:
@@ -255,7 +255,7 @@ void Pipeline< p, P, flags >::clip_line(
 			max_t = std::min(max_t, (l - r) / (dr - dl));
 		}
 	};
-	
+
 	//local names for clip positions and their difference:
 	Vec4 const &a = va.clip_position;
 	Vec4 const &b = vb.clip_position;
@@ -298,7 +298,7 @@ void Pipeline< p, P, flags >::clip_line(
  *  emit_vertex: call to produce clipped triangles (three calls per triangle)
  *
  * If clipping truncates the triangle, attributes of the new vertices should respect the pipeline's interpolation mode.
- * 
+ *
  * If no portion of the triangle remains after clipping, emit_vertex will not be called.
  *
  * The clipped triangle(s) should have the same winding order as the full triangle.
@@ -324,7 +324,7 @@ void Pipeline< p, P, flags >::clip_triangle(
  * calls emit_fragment( frag ) for every pixel "covered" by the line (va.fb_position.xy, vb.fb_position.xy).
  *
  *    a pixel (x,y) is "covered" by the line if it exits the inscribed diamond:
- * 
+ *
  *        (x+0.5,y+1)
  *        /        \
  *    (x,y+0.5)  (x+1,y+0.5)
@@ -332,10 +332,10 @@ void Pipeline< p, P, flags >::clip_triangle(
  *         (x+0.5,y)
  *
  *    to avoid ambiguity, we consider diamonds to contain their left and bottom points
- *    but not their top and right points. 
- * 
+ *    but not their top and right points.
+ *
  * 	  since 45 degree lines breaks this rule, our rule in general is to rasterize the line as if its
- *    endpoints va and vb were at va + (e, e^2) and vb + (e, e^2) where no smaller nonzero e produces 
+ *    endpoints va and vb were at va + (e, e^2) and vb + (e, e^2) where no smaller nonzero e produces
  *    a different rasterization result.
  *
  * for each such diamond, pass Fragment frag to emit_fragment, with:
@@ -395,19 +395,19 @@ void Pipeline< p, P, flags >::rasterize_line(
 			frag.fb_position.y = x;
 		} else {
 			frag.fb_position.x = x;
-			frag.fb_position.y = y;			
+			frag.fb_position.y = y;
 		}
 		frag.fb_position.z = z;
 		frag.attributes = va.attributes;
 		frag.derivatives.fill(Vec2(0.0f, 0.0f));
 
 		// diamond-exit or if slope = (0 or infinity)
-		if (std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5 || dx == 0 || 
+		if (std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5 || dx == 0 ||
 				std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5 || dy == 0)
 			emit_fragment(frag);
 
 		// emit fragment only if it is on the top or left of a triangle
-		// if (((std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) <= 0.5) && (dy >= 0)) || 
+		// if (((std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) <= 0.5) && (dy >= 0)) ||
 		// 		((std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) <= 0.5) && (dx <= 0)))
 		// 	emit_fragment(frag);
 	}
@@ -444,7 +444,7 @@ void Pipeline< p, P, flags >::rasterize_line(
  *  fragment center lies on that edge, rasterize_triangle should
  *  make sure that exactly one of the triangles emits that fragment.
  *  (Otherwise, speckles or cracks can appear in the final render.)
- * 
+ *
  *  For degenerate (co-linear) triangles, you may consider them to not be on any side of an edge.
  * 	Thus, even if two degnerate triangles share an edge that contains a fragment center, you don't need to emit it.
  *  You will not lose points for doing something reasonable when handling this case
@@ -480,12 +480,12 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 			slope1 = 0;
 			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
 			slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
-		} 
+		}
 		else if (v3.fb_position.y == v2.fb_position.y) { // flat top
 			slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
 			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
 			slope3 = 0;
-		} 
+		}
 		else { // general case
 			slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
 			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
