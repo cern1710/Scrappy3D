@@ -587,8 +587,6 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 						}
 						derivatives[i] = Vec2(dAttribute_dx, dAttribute_dy);
 					}
-
-					// Emit fragment
 					Fragment frag;
 					frag.fb_position = Vec3(centerX, centerY, z);
 					frag.attributes = interpolatedAttributes;
@@ -599,10 +597,6 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		}
 	} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Correct) {
 		//A1T5: perspective correct triangles
-		//TODO: rasterize triangle (block comment above this function).
-
-		//As a placeholder, here's code that calls the Screen-space interpolation function:
-		//(remove this and replace it with a real solution)
 		float lambda1, lambda2, lambda3, area;
 		float centerX, centerY, d1, d2, d3;
 		bool has_neg, has_pos;
@@ -647,11 +641,6 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 					float dAttribute_dx, dAttribute_dy;
 
 					for (uint32_t i = 0; i < FD; i++) {
-						dAttribute_dx_forward = 0.0f;
-						dAttribute_dy_forward = 0.0f;
-						dAttribute_dx_backward = 0.0f;
-						dAttribute_dy_backward = 0.0f;
-
 						// Forward differencing
 						if (centerX + 1 < maxX) {
 							float attributeRight = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
@@ -686,8 +675,6 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 						}
 						derivatives[i] = Vec2(dAttribute_dx, dAttribute_dy);
 					}
-
-					// Emit fragment
 					Fragment frag;
 					frag.fb_position = Vec3(centerX, centerY, z);
 					frag.attributes = interpolatedAttributes;
