@@ -520,6 +520,10 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		float centerX, centerY, d1, d2, d3;
 		float centerX_h, centerY_h;
 		bool has_neg, has_pos;
+		float dAttribute_dx_forward, dAttribute_dy_forward;
+		float dAttribute_dx_backward, dAttribute_dy_backward;
+		float dAttribute_dx, dAttribute_dy;
+		float z;
 
 		for (float y = minY; y <= maxY; y++) {
 			for (float x = minX; x <= maxX; x++) {
@@ -536,12 +540,12 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 				// Calculate barycentric coordinates
 				area = (v2.fb_position.x - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
 						(v2.fb_position.y - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
-				lambda1 = ((v2.fb_position.x - centerX) * (v3.fb_position.y - centerY) - (v2.fb_position.y - centerY) * (v3.fb_position.x - centerX)) / area;
-				lambda2 = ((v3.fb_position.x - centerX) * (v1.fb_position.y - centerY) - (v3.fb_position.y - centerY) * (v1.fb_position.x - centerX)) / area;
-				lambda3 = 1.0f - lambda1 - lambda2;
 
 				if (!(has_neg && has_pos)) {
-					float z = lambda1 * v1.fb_position.z + lambda2 * v2.fb_position.z + lambda3 * v3.fb_position.z;
+					lambda1 = d2 / area;
+					lambda2 = d3 / area;
+					lambda3 = d1 / area;
+					z = lambda1 * v1.fb_position.z + lambda2 * v2.fb_position.z + lambda3 * v3.fb_position.z;
 
 					// Interpolate attributes
 					std::array<float, FA> interpolatedAttributes;
@@ -551,10 +555,6 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 
 					// Calculate derivatives for each attribute
 					std::array<Vec2, FD> derivatives;
-					float dAttribute_dx_forward, dAttribute_dy_forward;
-					float dAttribute_dx_backward, dAttribute_dy_backward;
-					float dAttribute_dx, dAttribute_dy;
-
 					for (uint32_t i = 0; i < FD; i++) {
 						// Forward differencing
 						if (centerX < maxX) {
@@ -664,6 +664,10 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		float centerX, centerY, d1, d2, d3;
 		float centerX_h, centerY_h;
 		bool has_neg, has_pos;
+		float dAttribute_dx_forward, dAttribute_dy_forward;
+		float dAttribute_dx_backward, dAttribute_dy_backward;
+		float dAttribute_dx, dAttribute_dy;
+		float z, w;
 
 		for (float y = minY; y <= maxY; y++) {
 			for (float x = minX; x <= maxX; x++) {
@@ -680,30 +684,26 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 				// Calculate barycentric coordinates
 				area = (v2.fb_position.x - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
 						(v2.fb_position.y - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
-				lambda1 = ((v2.fb_position.x - centerX) * (v3.fb_position.y - centerY) - (v2.fb_position.y - centerY) * (v3.fb_position.x - centerX)) / area;
-				lambda2 = ((v3.fb_position.x - centerX) * (v1.fb_position.y - centerY) - (v3.fb_position.y - centerY) * (v1.fb_position.x - centerX)) / area;
-				lambda3 = 1.0f - lambda1 - lambda2;
 
 				if (!(has_neg && has_pos)) {
-					float z = lambda1 * v1.fb_position.z + lambda2 * v2.fb_position.z + lambda3 * v3.fb_position.z;
+					lambda1 = d2 / area;
+					lambda2 = d3 / area;
+					lambda3 = d1 / area;
+					z = lambda1 * v1.fb_position.z + lambda2 * v2.fb_position.z + lambda3 * v3.fb_position.z;
 
 					// Interpolate inverse depth (w)
-					float w = lambda1 * (1.0f / v1.inv_w) + lambda2 * (1.0f / v2.inv_w) + lambda3 * (1.0f / v3.inv_w);
+					w = lambda1 * v1.inv_w + lambda2 * v2.inv_w + lambda3 * v3.inv_w;
 
 					// Interpolate attributes with perspective correction
 					std::array<float, FA> interpolatedAttributes;
 					for (uint32_t i = 0; i < FA; i++) {
-						interpolatedAttributes[i] = (lambda1 * v1.attributes[i] / v1.inv_w +
-													lambda2 * v2.attributes[i] / v2.inv_w +
-													lambda3 * v3.attributes[i] / v3.inv_w) / w;
+						interpolatedAttributes[i] = (lambda1 * v1.attributes[i] * v1.inv_w +
+													lambda2 * v2.attributes[i] * v2.inv_w +
+													lambda3 * v3.attributes[i] * v3.inv_w) / w;
 					}
 
 					// Calculate derivatives for each attribute
 					std::array<Vec2, FD> derivatives;
-					float dAttribute_dx_forward, dAttribute_dy_forward;
-					float dAttribute_dx_backward, dAttribute_dy_backward;
-					float dAttribute_dx, dAttribute_dy;
-
 					for (uint32_t i = 0; i < FD; i++) {
 						// Forward differencing
 						if (centerX < maxX) {
