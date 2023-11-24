@@ -141,7 +141,7 @@ void Pipeline< primitive_type, Program, flags >::run(
 		} else if constexpr ((flags & PipelineMask_Depth) == Pipeline_Depth_Less) {
 			//"Less" means the depth test passes when the new fragment has depth less than the stored depth.
 			//A1T4: Depth_Less
-			//TODO: implement depth test! We want to only emit fragments that have a depth less than the stored depth, hence "Depth_Less"
+			// We want to only emit fragments that have a depth less than the stored depth, hence "Depth_Less"
 			if (f.fb_position.z >= fb_depth)
 				continue; // Depth test failed. Discard this fragment.
 		} else {
@@ -166,12 +166,12 @@ void Pipeline< primitive_type, Program, flags >::run(
 				fb_color = sf.color;
 			} else if constexpr ((flags & PipelineMask_Blend) == Pipeline_Blend_Add) {
 				//A1T4: Blend_Add
-				//TODO: framebuffer color should have fragment color multiplied by fragment opacity added to it.
+				//framebuffer color should have fragment color multiplied by fragment opacity added to it.
 				fb_color += sf.color * sf.opacity;
 			} else if constexpr ((flags & PipelineMask_Blend) == Pipeline_Blend_Over) {
 				//A1T4: Blend_Over
-				//TODO: set framebuffer color to the result of "over" blending (also called "alpha blending") the fragment color over the framebuffer color, using the fragment's opacity
-				// 		You may assume that the framebuffer color has its alpha premultiplied already, and you just want to compute the resulting composite color
+				// set framebuffer color to the result of "over" blending (also called "alpha blending") the fragment color over the framebuffer color, using the fragment's opacity
+				// You may assume that the framebuffer color has its alpha premultiplied already, and you just want to compute the resulting composite color
 				fb_color = sf.color * sf.opacity + fb_color * (1.0f - sf.opacity);
 			} else {
 				static_assert((flags & PipelineMask_Blend) <= Pipeline_Blend_Over, "Unknown blending flag.");
@@ -463,31 +463,30 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 	// same code paths. Be aware, however, that all of them need to remain working!
 	// (e.g., if you break Flat while implementing Correct, you won't get points
 	//  for Flat.)
+
+	// sort vertices such that v1 < v2 < v3
+	std::array<ClippedVertex, 3> vertices = {va, vb, vc};
+	std::sort(vertices.begin(), vertices.end(), [](const ClippedVertex& a, const ClippedVertex& b) {
+		return a.fb_position.y < b.fb_position.y || (a.fb_position.y == b.fb_position.y && a.fb_position.x < b.fb_position.x);
+	});
+	ClippedVertex& v1 = vertices[0];
+	ClippedVertex& v2 = vertices[1];
+	ClippedVertex& v3 = vertices[2];
+	ClippedVertex a, b;
+
+	// Calculate bounding box
+	float minX = std::floor(std::min({va.fb_position.x, vb.fb_position.x, vc.fb_position.x}));
+	float maxX = std::ceil(std::max({va.fb_position.x, vb.fb_position.x, vc.fb_position.x}));
+	float minY = std::floor(std::min({va.fb_position.y, vb.fb_position.y, vc.fb_position.y}));
+	float maxY = std::ceil(std::max({va.fb_position.y, vb.fb_position.y, vc.fb_position.y}));
+
 	if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Flat) {
 		//A1T3: flat triangles
-		//TODO: rasterize triangle (see block comment above this function).
 
-		// sort vertices such that v1 < v2 < v3
-		std::array<ClippedVertex, 3> vertices = {va, vb, vc};
-		std::sort(vertices.begin(), vertices.end(), [](const ClippedVertex& a, const ClippedVertex& b) {
-			return a.fb_position.y < b.fb_position.y || (a.fb_position.y == b.fb_position.y && a.fb_position.x < b.fb_position.x);
-		});
-		ClippedVertex& v1 = vertices[0];
-		ClippedVertex& v2 = vertices[1];
-		ClippedVertex& v3 = vertices[2];
-		ClippedVertex a, b;
-
-		// Calculate bounding box
-		float minX = std::floor(std::min({va.fb_position.x, vb.fb_position.x, vc.fb_position.x}));
-		float maxX = std::ceil(std::max({va.fb_position.x, vb.fb_position.x, vc.fb_position.x}));
-		float minY = std::floor(std::min({va.fb_position.y, vb.fb_position.y, vc.fb_position.y}));
-		float maxY = std::ceil(std::max({va.fb_position.y, vb.fb_position.y, vc.fb_position.y}));
-
-		// Edge walking
 		float centerX, centerY, d1, d2, d3;
 		float area, w1, w2, w3;
 		bool has_neg, has_pos;
-
+		// Edge walking
 		for (float y = minY; y <= maxY; y++) {
 			for (float x = minX; x <= maxX; x++) {
 				centerX = x + 0.5f;
@@ -515,18 +514,188 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		}
 	} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Screen) {
 		//A1T5: screen-space smooth triangles
-		//TODO: rasterize triangle (see block comment above this function).
+		float lambda1, lambda2, lambda3, area;
+		float centerX, centerY, d1, d2, d3;
+		bool has_neg, has_pos;
 
-		//As a placeholder, here's code that calls the Flat interpolation version of the function:
-		//(remove this and replace it with a real solution)
-		Pipeline< PrimitiveType::Lines, P, (flags  & ~PipelineMask_Interp) | Pipeline_Interp_Flat >::rasterize_triangle(va, vb, vc, emit_fragment);
+		for (float y = minY; y <= maxY; y++) {
+			for (float x = minX; x <= maxX; x++) {
+				centerX = x + 0.5f;
+        		centerY = y + 0.5f;
+
+				d1 = (centerX - v2.fb_position.x) * (v1.fb_position.y - v2.fb_position.y) - (v1.fb_position.x - v2.fb_position.x) * (centerY - v2.fb_position.y);
+				d2 = (centerX - v3.fb_position.x) * (v2.fb_position.y - v3.fb_position.y) - (v2.fb_position.x - v3.fb_position.x) * (centerY - v3.fb_position.y);
+				d3 = (centerX - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) - (v3.fb_position.x - v1.fb_position.x) * (centerY - v1.fb_position.y);
+
+				has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+				has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+				// Calculate barycentric coordinates
+				area = (v2.fb_position.x - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
+						(v2.fb_position.y - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
+				lambda1 = ((v2.fb_position.x - centerX) * (v3.fb_position.y - centerY) - (v2.fb_position.y - centerY) * (v3.fb_position.x - centerX)) / area;
+				lambda2 = ((v3.fb_position.x - centerX) * (v1.fb_position.y - centerY) - (v3.fb_position.y - centerY) * (v1.fb_position.x - centerX)) / area;
+				lambda3 = 1.0f - lambda1 - lambda2;
+
+				if (!(has_neg && has_pos)) {
+					float z = lambda1 * v1.fb_position.z + lambda2 * v2.fb_position.z + lambda3 * v3.fb_position.z;
+
+					// Interpolate attributes
+					std::array<float, FA> interpolatedAttributes;
+					for (uint32_t i = 0; i < FA; i++) {
+						interpolatedAttributes[i] = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+					}
+
+					// Calculate derivatives for each attribute
+					std::array<Vec2, FD> derivatives;
+					float dAttribute_dx_forward, dAttribute_dy_forward;
+					float dAttribute_dx_backward, dAttribute_dy_backward;
+					float dAttribute_dx, dAttribute_dy;
+
+					for (uint32_t i = 0; i < FD; i++) {
+						// Forward differencing
+						if (centerX + 1 < maxX) {
+							float attributeRight = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+							dAttribute_dx_forward = attributeRight - interpolatedAttributes[i];
+						}
+						if (centerY + 1 < maxY) {
+							float attributeUp = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+							dAttribute_dy_forward = attributeUp - interpolatedAttributes[i];
+						}
+
+						// Backward differencing
+						if (centerX > minX) {
+							float attributeLeft = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+							dAttribute_dx_backward = interpolatedAttributes[i] - attributeLeft;
+						}
+						if (centerY > minY) {
+							float attributeDown = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+							dAttribute_dy_backward = interpolatedAttributes[i] - attributeDown;
+						}
+
+						// Choose the appropriate derivative based on the context
+						if (std::fabs(dAttribute_dx_forward) < std::fabs(dAttribute_dx_backward) || centerX == maxX - 1) {
+							dAttribute_dx = dAttribute_dx_forward;
+						} else {
+							dAttribute_dx = dAttribute_dx_backward;
+						}
+
+						if (std::fabs(dAttribute_dy_forward) < std::fabs(dAttribute_dy_backward) || centerY == maxY - 1) {
+							dAttribute_dy = dAttribute_dy_forward;
+						} else {
+							dAttribute_dy = dAttribute_dy_backward;
+						}
+						derivatives[i] = Vec2(dAttribute_dx, dAttribute_dy);
+					}
+
+					// Emit fragment
+					Fragment frag;
+					frag.fb_position = Vec3(centerX, centerY, z);
+					frag.attributes = interpolatedAttributes;
+					frag.derivatives = derivatives;
+					emit_fragment(frag);
+				}
+			}
+		}
 	} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Correct) {
 		//A1T5: perspective correct triangles
 		//TODO: rasterize triangle (block comment above this function).
 
 		//As a placeholder, here's code that calls the Screen-space interpolation function:
 		//(remove this and replace it with a real solution)
-		Pipeline< PrimitiveType::Lines, P, (flags  & ~PipelineMask_Interp) | Pipeline_Interp_Screen >::rasterize_triangle(va, vb, vc, emit_fragment);
+		float lambda1, lambda2, lambda3, area;
+		float centerX, centerY, d1, d2, d3;
+		bool has_neg, has_pos;
+
+		for (float y = minY; y <= maxY; y++) {
+			for (float x = minX; x <= maxX; x++) {
+				centerX = x + 0.5f;
+        		centerY = y + 0.5f;
+
+				d1 = (centerX - v2.fb_position.x) * (v1.fb_position.y - v2.fb_position.y) - (v1.fb_position.x - v2.fb_position.x) * (centerY - v2.fb_position.y);
+				d2 = (centerX - v3.fb_position.x) * (v2.fb_position.y - v3.fb_position.y) - (v2.fb_position.x - v3.fb_position.x) * (centerY - v3.fb_position.y);
+				d3 = (centerX - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) - (v3.fb_position.x - v1.fb_position.x) * (centerY - v1.fb_position.y);
+
+				has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+				has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+				// Calculate barycentric coordinates
+				area = (v2.fb_position.x - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
+						(v2.fb_position.y - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
+				lambda1 = ((v2.fb_position.x - centerX) * (v3.fb_position.y - centerY) - (v2.fb_position.y - centerY) * (v3.fb_position.x - centerX)) / area;
+				lambda2 = ((v3.fb_position.x - centerX) * (v1.fb_position.y - centerY) - (v3.fb_position.y - centerY) * (v1.fb_position.x - centerX)) / area;
+				lambda3 = 1.0f - lambda1 - lambda2;
+
+				if (!(has_neg && has_pos)) {
+					float z = lambda1 * v1.fb_position.z + lambda2 * v2.fb_position.z + lambda3 * v3.fb_position.z;
+
+					// Interpolate inverse depth (w)
+					float w = lambda1 * (1.0f / v1.inv_w) + lambda2 * (1.0f / v2.inv_w) + lambda3 * (1.0f / v3.inv_w);
+
+					// Interpolate attributes with perspective correction
+					std::array<float, FA> interpolatedAttributes;
+					for (uint32_t i = 0; i < FA; i++) {
+						interpolatedAttributes[i] = (lambda1 * v1.attributes[i] / v1.inv_w +
+													lambda2 * v2.attributes[i] / v2.inv_w +
+													lambda3 * v3.attributes[i] / v3.inv_w) / w;
+					}
+
+					// Calculate derivatives for each attribute
+					std::array<Vec2, FD> derivatives;
+					float dAttribute_dx_forward, dAttribute_dy_forward;
+					float dAttribute_dx_backward, dAttribute_dy_backward;
+					float dAttribute_dx, dAttribute_dy;
+
+					for (uint32_t i = 0; i < FD; i++) {
+						dAttribute_dx_forward = 0.0f;
+						dAttribute_dy_forward = 0.0f;
+						dAttribute_dx_backward = 0.0f;
+						dAttribute_dy_backward = 0.0f;
+
+						// Forward differencing
+						if (centerX + 1 < maxX) {
+							float attributeRight = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+							dAttribute_dx_forward = attributeRight - interpolatedAttributes[i];
+						}
+						if (centerY + 1 < maxY) {
+							float attributeUp = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+							dAttribute_dy_forward = attributeUp - interpolatedAttributes[i];
+						}
+
+						// Backward differencing
+						if (centerX > minX) {
+							float attributeLeft = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+							dAttribute_dx_backward = interpolatedAttributes[i] - attributeLeft;
+						}
+						if (centerY > minY) {
+							float attributeDown = lambda1 * v1.attributes[i] + lambda2 * v2.attributes[i] + lambda3 * v3.attributes[i];
+							dAttribute_dy_backward = interpolatedAttributes[i] - attributeDown;
+						}
+
+						// Choose the appropriate derivative based on the context
+						if (std::fabs(dAttribute_dx_forward) < std::fabs(dAttribute_dx_backward) || centerX == maxX - 1) {
+							dAttribute_dx = dAttribute_dx_forward;
+						} else {
+							dAttribute_dx = dAttribute_dx_backward;
+						}
+
+						if (std::fabs(dAttribute_dy_forward) < std::fabs(dAttribute_dy_backward) || centerY == maxY - 1) {
+							dAttribute_dy = dAttribute_dy_forward;
+						} else {
+							dAttribute_dy = dAttribute_dy_backward;
+						}
+						derivatives[i] = Vec2(dAttribute_dx, dAttribute_dy);
+					}
+
+					// Emit fragment
+					Fragment frag;
+					frag.fb_position = Vec3(centerX, centerY, z);
+					frag.attributes = interpolatedAttributes;
+					frag.derivatives = derivatives;
+					emit_fragment(frag);
+				}
+			}
+		}
 	}
 }
 
