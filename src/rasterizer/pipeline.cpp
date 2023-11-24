@@ -403,13 +403,13 @@ void Pipeline< p, P, flags >::rasterize_line(
 
 		// diamond-exit or if slope = (0 or infinity)
 		if (std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) < 0.5 || dx == 0 ||
-				std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5 || dy == 0)
+			std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) < 0.5 || dy == 0)
 			emit_fragment(frag);
 
 		// emit fragment only if it is on the top or left of a triangle
-		// if (((std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) <= 0.5) && (dy >= 0)) ||
-		// 		((std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) <= 0.5) && (dx <= 0)))
-		// 	emit_fragment(frag);
+		else if (((std::abs(std::round(frag.fb_position.y) - frag.fb_position.y) <= 0.5) && (dy >= 0)) ||
+				 ((std::abs(std::round(frag.fb_position.x) - frag.fb_position.x) <= 0.5) && (dx <= 0)))
+			emit_fragment(frag);
 	}
 }
 
@@ -475,42 +475,41 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		ClippedVertex& v3 = vertices[2];
 		ClippedVertex a, b;
 
-		float slope1, slope2, slope3;
-		if (v2.fb_position.y == v1.fb_position.y) { // flat bottom
-			slope1 = 0;
-			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
-			slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
-		}
-		else if (v3.fb_position.y == v2.fb_position.y) { // flat top
-			slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
-			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
-			slope3 = 0;
-		}
-		else { // general case
-			slope1 = (v2.fb_position.x - v1.fb_position.x) / (v2.fb_position.y - v1.fb_position.y);
-			slope2 = (v3.fb_position.x - v1.fb_position.x) / (v3.fb_position.y - v1.fb_position.y);
-			slope3 = (v3.fb_position.x - v2.fb_position.x) / (v3.fb_position.y - v2.fb_position.y);
-		}
-		float y = v1.fb_position.y;
+		// Calculate bounding box
+		float minX = std::floor(std::min({va.fb_position.x, vb.fb_position.x, vc.fb_position.x}));
+		float maxX = std::ceil(std::max({va.fb_position.x, vb.fb_position.x, vc.fb_position.x}));
+		float minY = std::floor(std::min({va.fb_position.y, vb.fb_position.y, vc.fb_position.y}));
+		float maxY = std::ceil(std::max({va.fb_position.y, vb.fb_position.y, vc.fb_position.y}));
 
-		for (; y <= v2.fb_position.y; y++) {
-			a = v1, b = v2;
-			a.fb_position.x += (y - v1.fb_position.y) * slope2;
-			b.fb_position.x += (y - v2.fb_position.y) * slope1;
-			if (a.fb_position.x > b.fb_position.x) std::swap(a, b);
-			Pipeline< PrimitiveType::Lines, P, flags>::rasterize_line(a, b, emit_fragment);
-		}
-		// if (v2.fb_position.y != std::floor(v2.fb_position.y)) {
-		// 	y = v2.fb_position.y;
-		// }
-		for (; y <= v3.fb_position.y; y++) {
-			a = v2, b = v3;
-			a.fb_position.x += (y - v2.fb_position.y) * slope3;
-			b.fb_position.x += (y - v3.fb_position.y) * slope2;
-			if (a.fb_position.x > b.fb_position.x) std::swap(a, b);
-			// std::cout << "\nA: (" << a.fb_position.x << ", " << a.fb_position.y << ")\n";
-			// std::cout << "B: (" << b.fb_position.x << ", " << b.fb_position.y << ")\n";
-			Pipeline< PrimitiveType::Lines, P, flags>::rasterize_line(a, b, emit_fragment);
+		// Edge walking
+		float centerX, centerY, d1, d2, d3;
+		float area, w1, w2, w3;
+		bool has_neg, has_pos;
+
+		for (float y = minY; y <= maxY; y++) {
+			for (float x = minX; x <= maxX; x++) {
+				centerX = x + 0.5f;
+        		centerY = y + 0.5f;
+				d1 = (centerX - v2.fb_position.x) * (v1.fb_position.y - v2.fb_position.y) - (v1.fb_position.x - v2.fb_position.x) * (centerY - v2.fb_position.y);
+				d2 = (centerX - v3.fb_position.x) * (v2.fb_position.y - v3.fb_position.y) - (v2.fb_position.x - v3.fb_position.x) * (centerY - v3.fb_position.y);
+				d3 = (centerX - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) - (v3.fb_position.x - v1.fb_position.x) * (centerY - v1.fb_position.y);
+
+				has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+				has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+				if (!(has_neg && has_pos)) {
+					// Interpolate Z
+					area = (v1.fb_position.x - v3.fb_position.x) * (v2.fb_position.y - v3.fb_position.y) - (v2.fb_position.x - v3.fb_position.x) * (v1.fb_position.y - v3.fb_position.y);
+					w1 = ((centerX - v3.fb_position.x) * (v2.fb_position.y - v3.fb_position.y) - (v2.fb_position.x - v3.fb_position.x) * (centerY - v3.fb_position.y)) / area;
+					w2 = ((centerX - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) - (v3.fb_position.x - v1.fb_position.x) * (centerY - v1.fb_position.y)) / area;
+					w3 = 1.0f - w1 - w2;
+
+					Fragment frag;
+					frag.fb_position = Vec3(centerX, centerY, w1 * v1.fb_position.z + w2 * v2.fb_position.z + w3 * v3.fb_position.z);
+					frag.attributes = va.attributes; // Flat shading
+					emit_fragment(frag);
+				}
+			}
 		}
 	} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Screen) {
 		//A1T5: screen-space smooth triangles
