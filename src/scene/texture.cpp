@@ -53,9 +53,19 @@ Spectrum sample_bilinear(HDR_Image const &image, Vec2 uv) {
 
 Spectrum sample_trilinear(HDR_Image const &base, std::vector< HDR_Image > const &levels, Vec2 uv, float lod) {
 	//A1T6: sample_trilinear
-	//TODO: implement trilinear sampling strategy on using mip-map 'levels'
+    int32_t lod_level = std::floor(lod);
+    float lod_fraction = lod - lod_level; // Interpolation fraction
 
-	return sample_nearest(base, uv); //placeholder so image doesn't look blank
+    // Calculate the two mip levels to interpolate between
+    lod_level = std::clamp(lod_level, 0, int32_t(levels.size()) - 1);
+    int32_t next_lod_level = std::min(lod_level + 1, int32_t(levels.size()) - 1);
+
+	// Sample the two mip levels
+    Spectrum color1 = sample_bilinear(levels[lod_level], uv);
+    Spectrum color2 = sample_bilinear(levels[next_lod_level], uv);
+
+	// Triliner interpolation
+    return color1 * (1 - lod_fraction) + color2 * lod_fraction;
 }
 
 /*
@@ -109,8 +119,11 @@ void generate_mipmap(HDR_Image const &base, std::vector< HDR_Image > *levels_) {
 		assert(std::max(1u, src.w / 2u) == dst.w);
 		assert(std::max(1u, src.h / 2u) == dst.h);
 
-		//A1T6: generate
-		//TODO: Write code to fill the levels of the mipmap hierarchy by downsampling
+		//A1T6: Sample from a 2x2 block in the src image and average them
+		for (uint32_t y = 0; y < dst.h; y++)
+			for (uint32_t x = 0; x < dst.w; x++)
+				dst.at(x, y) = (src.at(2 * x, 2 * y) + src.at(2 * x + 1, 2 * y) +
+								src.at(2 * x, 2 * y + 1) + src.at(2 * x + 1, 2 * y + 1)) * 0.25f;
 
 		//Be aware that the alignment of the samples in dst and src will be different depending on whether the image is even or odd.
 
