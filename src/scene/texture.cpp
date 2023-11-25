@@ -24,9 +24,30 @@ Spectrum sample_nearest(HDR_Image const &image, Vec2 uv) {
 
 Spectrum sample_bilinear(HDR_Image const &image, Vec2 uv) {
 	//A1T6: sample_bilinear
-	//TODO: implement bilinear sampling strategy on texture 'image'
+    float x = image.w * uv.x - 0.5f;
+    float y = image.h * uv.y - 0.5f;
 
-	return sample_nearest(image, uv); //placeholder so image doesn't look blank
+	// The pixel with the nearest center is the pixel that contains (x,y)
+    int32_t ix = int32_t(std::floor(x));
+    int32_t iy = int32_t(std::floor(y));
+
+    float dx = x - std::floor(x);
+    float dy = y - std::floor(y);
+
+    // Clamp indices to the bounds of the image
+    ix = std::clamp(ix, 0, int32_t(image.w) - 2);
+    iy = std::clamp(iy, 0, int32_t(image.h) - 2);
+
+    // Sample four nearest texels
+    Spectrum f00 = image.at(ix, iy);
+    Spectrum f10 = image.at(ix + 1, iy);
+    Spectrum f01 = image.at(ix, iy + 1);
+    Spectrum f11 = image.at(ix + 1, iy + 1);
+
+    // Interpolate coordinates
+    Spectrum cx0 = f00 * (1 - dx) + f10 * dx;
+    Spectrum cx1 = f01 * (1 - dx) + f11 * dx;
+    return cx0 * (1 - dy) + cx1 * dy;
 }
 
 
@@ -105,7 +126,7 @@ void generate_mipmap(HDR_Image const &base, std::vector< HDR_Image > *levels_) {
 		downsample(src, dst);
 	}
 	std::cout << std::endl;
-	
+
 }
 
 Image::Image(Sampler sampler_, HDR_Image const &image_) {
