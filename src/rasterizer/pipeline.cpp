@@ -459,19 +459,12 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 		ClippedVertex const &va, ClippedVertex const &vb, ClippedVertex const &vc,
 		std::function< void(Fragment const &) > const &emit_fragment
 	) {
-	//NOTE: it is okay to restructure this function to allow these tasks to use the
-	// same code paths. Be aware, however, that all of them need to remain working!
-	// (e.g., if you break Flat while implementing Correct, you won't get points
-	//  for Flat.)
-
 	// sort vertices such that v1 < v2 < v3
 	std::array<ClippedVertex, 3> vertices = {va, vb, vc};
 	std::sort(vertices.begin(), vertices.end(), [](const ClippedVertex& a, const ClippedVertex& b) {
 		return a.fb_position.y < b.fb_position.y || (a.fb_position.y == b.fb_position.y && a.fb_position.x < b.fb_position.x);
 	});
-	ClippedVertex& v1 = vertices[0];
-	ClippedVertex& v2 = vertices[1];
-	ClippedVertex& v3 = vertices[2];
+	ClippedVertex &v1 = vertices[0], &v2 = vertices[1], &v3 = vertices[2];
 	ClippedVertex a, b;
 
 	// Calculate bounding box
@@ -512,19 +505,23 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 					z = lambda1 * v1.fb_position.z + lambda2 * v2.fb_position.z + lambda3 * v3.fb_position.z;
 
 					// Interpolate attributes
-					if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Flat) {
-						interpolatedAttributes = va.attributes;
-					} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Screen) {
-						for (uint32_t i = 0; i < FA; i++)
-							interpolatedAttributes[i] = lambda1 * v1.attributes[i] +
-														lambda2 * v2.attributes[i] +
-														lambda3 * v3.attributes[i];
-					} else if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Correct) {
-						w = lambda1 * v1.inv_w + lambda2 * v2.inv_w + lambda3 * v3.inv_w; // Interpolate inverse depth (w)
-						for (uint32_t i = 0; i < FA; i++)
-							interpolatedAttributes[i] = (lambda1 * v1.attributes[i] * v1.inv_w +
-														lambda2 * v2.attributes[i] * v2.inv_w +
-														lambda3 * v3.attributes[i] * v3.inv_w) / w;
+					switch (flags & PipelineMask_Interp) {
+						case Pipeline_Interp_Flat:
+							interpolatedAttributes = va.attributes;
+							break;
+						case Pipeline_Interp_Screen:
+							for (uint32_t i = 0; i < FA; i++)
+								interpolatedAttributes[i] = lambda1 * v1.attributes[i] +
+															lambda2 * v2.attributes[i] +
+															lambda3 * v3.attributes[i];
+							break;
+						case Pipeline_Interp_Correct:
+							w = lambda1 * v1.inv_w + lambda2 * v2.inv_w + lambda3 * v3.inv_w; // Interpolate inverse depth (w)
+							for (uint32_t i = 0; i < FA; i++)
+								interpolatedAttributes[i] = (lambda1 * v1.attributes[i] * v1.inv_w +
+															lambda2 * v2.attributes[i] * v2.inv_w +
+															lambda3 * v3.attributes[i] * v3.inv_w) / w;
+							break;
 					}
 
 					frag.fb_position = Vec3(centerX, centerY, z);
