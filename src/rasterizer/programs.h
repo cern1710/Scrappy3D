@@ -109,7 +109,12 @@ struct Lambertian {
 		// reading onward, you will discover that \rho can be computed in a number of ways
 		//  it is up to you to select one that makes sense in this context
 
-		float lod = 0.0f; //<-- replace this line
+		// Calculate the lengths (magnitudes) of the derivative vectors
+		float Ddx = sqrt(fdx_texcoord.x * fdx_texcoord.x + fdx_texcoord.y * fdx_texcoord.y);
+		float Ddy = sqrt(fdy_texcoord.x * fdy_texcoord.x + fdy_texcoord.y * fdy_texcoord.y);
+
+		// Compute LOD using the formula
+		float lod = log2(std::max(Ddx, Ddy));
 		//-----
 
 
