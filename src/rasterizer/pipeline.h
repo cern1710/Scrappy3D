@@ -137,7 +137,14 @@ struct Pipeline {
 		ClippedVertex const &a, ClippedVertex const &b, ClippedVertex const &c, //triangle (a,b,c)
 		std::function< void(Fragment const &) > const &emit_fragment //call with every fragment covered by the triangle
 	);
-
+	static std::tuple<float, float, float, float> calculateBarycentricCoordinates(
+    	const ClippedVertex &v1, const ClippedVertex &v2, const ClippedVertex &v3, float centerX, float centerY
+	);
+	static float calculateDerivative(
+		const ClippedVertex &v1, const ClippedVertex &v2, const ClippedVertex &v3,
+		float area, float centerX, float centerY, float offset_x, float offset_y,
+		const std::array<float, FA> &attributes, uint32_t attributeIndex
+	);
 	//(7) tests fragment depths vs depth buffer (based on flags)
 
 	//(8) transforms fragments via Program::shade_fragment() to produce a color and opacity, stored in a ShadedFragment:

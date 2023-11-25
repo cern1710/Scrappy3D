@@ -483,11 +483,8 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 	if constexpr ((flags & PipelineMask_Interp) == Pipeline_Interp_Flat ||
 					(flags & PipelineMask_Interp) == Pipeline_Interp_Screen ||
 				 	(flags & PipelineMask_Interp) == Pipeline_Interp_Correct) {
-		float lambda1, lambda2, lambda3, area;
-		float lambda1_h, lambda2_h, lambda3_h;
-		float area1, area2, attribute;
-		float centerX, centerY, d1, d2, d3;
-		float centerX_h, centerY_h;
+		float lambda1, lambda2, lambda3;
+		float centerX, centerY;
 		float dAttribute_dx_forward, dAttribute_dy_forward;
 		float dAttribute_dx_backward, dAttribute_dy_backward;
 		float dAttribute_dx, dAttribute_dy;
@@ -502,16 +499,7 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 			for (x = minX; x <= maxX; x++) {
 				centerX = x + 0.5f;
         		centerY = y + 0.5f;
-
-				// Calculate barycentric coordinates
-				d1 = (centerX - v2.fb_position.x) * (v1.fb_position.y - v2.fb_position.y) -
-						(v1.fb_position.x - v2.fb_position.x) * (centerY - v2.fb_position.y);
-				d2 = (centerX - v3.fb_position.x) * (v2.fb_position.y - v3.fb_position.y) -
-						(v2.fb_position.x - v3.fb_position.x) * (centerY - v3.fb_position.y);
-				d3 = (centerX - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
-						(v3.fb_position.x - v1.fb_position.x) * (centerY - v1.fb_position.y);
-				area = (v2.fb_position.x - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
-						(v2.fb_position.y - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
+				auto [d1, d2, d3, area] = calculateBarycentricCoordinates(v1, v2, v3, centerX, centerY);
 
 				has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
 				has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
@@ -545,87 +533,15 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 									(flags & PipelineMask_Interp) == Pipeline_Interp_Correct) {
 						// Calculate derivatives for each attribute
 						for (uint32_t i = 0; i < FD; i++) {
-							// Forward differencing
-							if (centerX < maxX) {
-								centerX_h = centerX + 1.0f;
-								centerY_h = centerY;
-
-								// Calculate areas for the sub-triangles
-								area1 = (v2.fb_position.x - centerX_h) * (v3.fb_position.y - centerY_h) -
-										(v2.fb_position.y - centerY_h) * (v3.fb_position.x - centerX_h);
-								area2 = (centerX_h - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
-										(centerY_h - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
-
-								// Recompute the barycentric coordinates
-								lambda1_h = area1 / area;
-								lambda2_h = area2 / area;
-								lambda3_h = 1.0f - lambda1_h - lambda2_h;
-								attribute = lambda1_h * v1.attributes[i] + lambda2_h * v2.attributes[i] +
-											lambda3_h * v3.attributes[i];
-
-								dAttribute_dx_forward = attribute - interpolatedAttributes[i];
-							}
-							if (centerY < maxY) {
-								centerX_h = centerX;
-								centerY_h = centerY + 1.0f;
-
-								// Calculate areas for the sub-triangles
-								area1 = (v2.fb_position.x - centerX_h) * (v3.fb_position.y - centerY_h) -
-										(v2.fb_position.y - centerY_h) * (v3.fb_position.x - centerX_h);
-								area2 = (centerX_h - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
-										(centerY_h - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
-
-								// Recompute the barycentric coordinates
-								lambda1_h = area1 / area;
-								lambda2_h = area2 / area;
-								lambda3_h = 1.0f - lambda1_h - lambda2_h;
-								attribute = lambda1_h * v1.attributes[i] + lambda2_h * v2.attributes[i] +
-											lambda3_h * v3.attributes[i];
-
-								dAttribute_dy_forward = attribute - interpolatedAttributes[i];
-							}
-
-							// Backward differencing
-							if (centerX > minX) {
-								centerX_h = centerX - 1.0f;
-								centerY_h = centerY;
-
-								// Calculate areas for the sub-triangles
-								area1 = (v2.fb_position.x - centerX_h) * (v3.fb_position.y - centerY_h) -
-										(v2.fb_position.y - centerY_h) * (v3.fb_position.x - centerX_h);
-								area2 = (centerX_h - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
-										(centerY_h - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
-
-								// Recompute the barycentric coordinates
-								lambda1_h = area1 / area;
-								lambda2_h = area2 / area;
-								lambda3_h = 1.0f - lambda1_h - lambda2_h;
-								attribute = lambda1_h * v1.attributes[i] + lambda2_h * v2.attributes[i] +
-											lambda3_h * v3.attributes[i];
-
-								dAttribute_dy_forward = attribute - interpolatedAttributes[i];
-								dAttribute_dx_backward = interpolatedAttributes[i] - attribute;
-							}
-							if (centerY > minY) {
-								centerX_h = centerX;
-								centerY_h = centerY - 1.0f;
-
-								// Calculate areas for the sub-triangles
-								area1 = (v2.fb_position.x - centerX_h) * (v3.fb_position.y - centerY_h) -
-										(v2.fb_position.y - centerY_h) * (v3.fb_position.x - centerX_h);
-								area2 = (centerX_h - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
-										(centerY_h - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
-
-								// Recompute the barycentric coordinates
-								lambda1_h = area1 / area;
-								lambda2_h = area2 / area;
-								lambda3_h = 1.0f - lambda1_h - lambda2_h;
-								attribute = lambda1_h * v1.attributes[i] + lambda2_h * v2.attributes[i] +
-											lambda3_h * v3.attributes[i];
-
-								dAttribute_dy_forward = attribute - interpolatedAttributes[i];
-								dAttribute_dy_backward = interpolatedAttributes[i] - attribute;
-							}
+							// Forward and backward differencing
+							if (centerX < maxX)
+								dAttribute_dx_forward = calculateDerivative(v1, v2, v3, area, centerX, centerY, 1.0f, 0, interpolatedAttributes, i);
+							if (centerY < maxY)
+								dAttribute_dy_forward = calculateDerivative(v1, v2, v3, area, centerX, centerY, 0, 1.0f, interpolatedAttributes, i);
+							if (centerX > minX)
+								dAttribute_dx_backward = -calculateDerivative(v1, v2, v3, area, centerX, centerY, -1.0f, 0, interpolatedAttributes, i);
+							if (centerY > minY)
+								dAttribute_dy_backward = -calculateDerivative(v1, v2, v3, area, centerX, centerY, 0, -1.0f, interpolatedAttributes, i);
 							// Pick forward if center (x.y) is max or backward > forward; vice versa
 							if (std::fabs(dAttribute_dx_forward) < std::fabs(dAttribute_dx_backward) || centerX == maxX - 1)
 								dAttribute_dx = dAttribute_dx_forward;
@@ -648,6 +564,50 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 	}
 }
 
+template<PrimitiveType p, class P, uint32_t flags>
+std::tuple<float, float, float, float> Pipeline<p, P, flags>::calculateBarycentricCoordinates(
+    	const ClippedVertex &v1, const ClippedVertex &v2, const ClippedVertex &v3, float centerX, float centerY
+	) {
+    float d1 = (centerX - v2.fb_position.x) * (v1.fb_position.y - v2.fb_position.y) -
+               (v1.fb_position.x - v2.fb_position.x) * (centerY - v2.fb_position.y);
+    float d2 = (centerX - v3.fb_position.x) * (v2.fb_position.y - v3.fb_position.y) -
+               (v2.fb_position.x - v3.fb_position.x) * (centerY - v3.fb_position.y);
+    float d3 = (centerX - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
+               (v3.fb_position.x - v1.fb_position.x) * (centerY - v1.fb_position.y);
+    float area = (v2.fb_position.x - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
+                 (v2.fb_position.y - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
+
+    return std::make_tuple(d1, d2, d3, area);
+}
+
+template<PrimitiveType p, class P, uint32_t flags>
+float Pipeline<p, P, flags>::calculateDerivative(
+		const ClippedVertex &v1, const ClippedVertex &v2, const ClippedVertex &v3,
+		float area, float centerX, float centerY, float offset_x, float offset_y,
+		const std::array<float, FA> &attributes, uint32_t attributeIndex
+	) {
+    float centerX_h = centerX + offset_x;
+    float centerY_h = centerY + offset_y;
+
+    // Calculate areas for the sub-triangles
+    float area1 = (v2.fb_position.x - centerX_h) * (v3.fb_position.y - centerY_h) -
+                  (v2.fb_position.y - centerY_h) * (v3.fb_position.x - centerX_h);
+    float area2 = (centerX_h - v1.fb_position.x) * (v3.fb_position.y - v1.fb_position.y) -
+                  (centerY_h - v1.fb_position.y) * (v3.fb_position.x - v1.fb_position.x);
+
+    // Recompute the barycentric coordinates
+    float lambda1_h = area1 / area;
+    float lambda2_h = area2 / area;
+    float lambda3_h = 1.0f - lambda1_h - lambda2_h;
+
+    // Calculate attribute value at the offset position
+    float attribute = lambda1_h * v1.attributes[attributeIndex] +
+                      lambda2_h * v2.attributes[attributeIndex] +
+                      lambda3_h * v3.attributes[attributeIndex];
+
+    // Return the derivative
+    return attribute - attributes[attributeIndex];
+}
 
 //-------------------------------------------------------------------------
 //compile instantiations for all programs and blending and testing types:
