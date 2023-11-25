@@ -540,14 +540,10 @@ void Pipeline< p, P, flags >::rasterize_triangle(
 							if (centerY > minY)
 								dAttribute_dy_backward = -calculateDerivative(v1, v2, v3, area, centerX, centerY, 0, -1.0f, interpolatedAttributes, i);
 							// Pick forward if center (x.y) is max or backward > forward; vice versa
-							if (std::fabs(dAttribute_dx_forward) < std::fabs(dAttribute_dx_backward) || centerX == maxX - 1)
-								dAttribute_dx = dAttribute_dx_forward;
-							else
-								dAttribute_dx = dAttribute_dx_backward;
-							if (std::fabs(dAttribute_dy_forward) < std::fabs(dAttribute_dy_backward) || centerY == maxY - 1)
-								dAttribute_dy = dAttribute_dy_forward;
-							else
-								dAttribute_dy = dAttribute_dy_backward;
+							dAttribute_dx =(std::fabs(dAttribute_dx_forward) < std::fabs(dAttribute_dx_backward) ||
+											centerX == maxX - 1) ? dAttribute_dx_forward : dAttribute_dx_backward;
+							dAttribute_dy = (std::fabs(dAttribute_dy_forward) < std::fabs(dAttribute_dy_backward) ||
+											centerY == maxY - 1) ? dAttribute_dy_forward : dAttribute_dy_backward;
 							derivatives[i] = Vec2(dAttribute_dx, dAttribute_dy);
 						}
 						frag.derivatives = derivatives;
@@ -602,7 +598,6 @@ float Pipeline<p, P, flags>::calculateDerivative(
                       lambda2_h * v2.attributes[attributeIndex] +
                       lambda3_h * v3.attributes[attributeIndex];
 
-    // Return the derivative
     return attribute - attributes[attributeIndex];
 }
 
