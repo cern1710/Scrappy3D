@@ -24,30 +24,40 @@ Spectrum sample_nearest(HDR_Image const &image, Vec2 uv) {
 
 Spectrum sample_bilinear(HDR_Image const &image, Vec2 uv) {
 	//A1T6: sample_bilinear
-    float x = image.w * uv.x - 0.5f;
-    float y = image.h * uv.y - 0.5f;
+	//clamp texture coordinates, convert to [0,w]x[0,h] pixel space:
+	float x = image.w * std::clamp(uv.x, 0.0f, 1.0f);
+	float y = image.h * std::clamp(uv.y, 0.0f, 1.0f);
 
 	// The pixel with the nearest center is the pixel that contains (x,y)
-    int32_t ix = int32_t(std::floor(x));
-    int32_t iy = int32_t(std::floor(y));
+    int32_t i = std::floor(x - 0.5f);
+    int32_t j = std::floor(y - 0.5f);
 
-    float dx = x - std::floor(x);
-    float dy = y - std::floor(y);
+	// Subpixel offsets of texels
+	float s = x - (i + 0.5f);
+	float t = y - (j + 0.5f);
 
-    // Clamp indices to the bounds of the image
-    ix = std::clamp(ix, 0, int32_t(image.w) - 2);
-    iy = std::clamp(iy, 0, int32_t(image.h) - 2);
+    // Bound all retrieved coordinates by image width and length
+    int32_t im_width = image.w - 1;
+    int32_t im_height = image.h - 1;
 
-    // Sample four nearest texels
-    Spectrum f00 = image.at(ix, iy);
-    Spectrum f10 = image.at(ix + 1, iy);
-    Spectrum f01 = image.at(ix, iy + 1);
-    Spectrum f11 = image.at(ix + 1, iy + 1);
+	// Sample four nearest texels
+    int32_t cx00 = std::min(i, im_width);
+    int32_t cy00 = std::min(j, im_height);
+    int32_t cx01 = std::min(i, im_width);
+    int32_t cy01 = std::min(j + 1, im_height);
+    int32_t cx10 = std::min(i + 1, im_width);
+    int32_t cy10 = std::min(j, im_height);
+    int32_t cx11 = std::min(i + 1, im_width);
+    int32_t cy11 = std::min(j + 1, im_height);
 
     // Interpolate coordinates
-    Spectrum cx0 = f00 * (1 - dx) + f10 * dx;
-    Spectrum cx1 = f01 * (1 - dx) + f11 * dx;
-    return cx0 * (1 - dy) + cx1 * dy;
+    Spectrum f00 = image.at(cx00, cy00);
+    Spectrum f01 = image.at(cx01, cy01);
+    Spectrum f10 = image.at(cx10, cy10);
+    Spectrum f11 = image.at(cx11, cy11);
+
+    // Interpolate along x and y axis
+    return (1 - t) * ((1 - s) * f00 + s * f10) + t * ((1 - s) * f01 + s * f11);
 }
 
 
