@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../lib/spectrum.h"
+#include "sample_pattern.h"
 
 #include <vector>
 
@@ -30,8 +31,9 @@ struct Framebuffer {
 	//return storage index for sample s of pixel (x,y):
 	uint32_t index(uint32_t x, uint32_t y, uint32_t s) const {
 		//A1T7: index
-		//TODO: update to provide different storage locations for different samples
-		return y * width + x;
+		//update to provide different storage locations for different samples
+		uint32_t num_samples = sample_pattern.centers_and_weights.size();
+		return (y * width + x) * num_samples + s;
 	}
 
 	//helpers that look up colors and depths for sample s of pixel (x,y):
