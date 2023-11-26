@@ -109,7 +109,7 @@ struct Lambertian {
 		// reading onward, you will discover that \rho can be computed in a number of ways
 		//  it is up to you to select one that makes sense in this context
 
-		float lod = std::log2(std::max(fdx_texcoord.norm(), fdy_texcoord.norm()));
+		float lod = std::log2(std::max((fdx_texcoord * wh).norm(), (fdy_texcoord * wh).norm()));
 		//-----
 
 
