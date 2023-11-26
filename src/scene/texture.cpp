@@ -63,6 +63,15 @@ Spectrum sample_bilinear(HDR_Image const &image, Vec2 uv) {
 
 Spectrum sample_trilinear(HDR_Image const &base, std::vector< HDR_Image > const &levels, Vec2 uv, float lod) {
 	//A1T6: sample_trilinear
+	if (lod <= 0) // Use base level when lod (-inf, 0]
+		return sample_bilinear(base, uv);
+	if (lod >= levels.size()) // Use best mipmap level (last vec value) when lod > number of levels
+		return sample_bilinear(levels.back(), uv);
+    if (lod <= 1) // Interpolate between base level and level 0 if lod is (0, 1]
+        return sample_bilinear(base, uv) * (1 - lod) + sample_bilinear(levels[0], uv) * lod;
+
+    lod -= 1.0f;  // Adjust lod for accessing mipmap levels; lod 0 has been handled (lod <= 1 check)
+
     int32_t lod_level = std::floor(lod);
     float lod_fraction = lod - lod_level; // Interpolation fraction
 
