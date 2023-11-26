@@ -31,10 +31,11 @@ HDR_Image Framebuffer::resolve_colors() const {
 
 	for (uint32_t y = 0; y < height; ++y) {
 		for (uint32_t x = 0; x < width; ++x) {
-			Spectrum avg{0.0f, 0.0f, 0.0f};
-			for (uint32_t z = 0; z < num_samples; ++z)
-				avg += color_at(x,y,z);
-			image.at(x , y) = avg / num_samples;
+			Spectrum sum{0.0f, 0.0f, 0.0f};
+			for (uint32_t z = 0; z < num_samples; ++z) {
+				sum += color_at(x, y, z) * sample_pattern.centers_and_weights[z].z;
+			}
+			image.at(x, y) = sum;
 		}
 	}
 
