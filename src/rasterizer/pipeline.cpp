@@ -213,12 +213,21 @@ void Pipeline< primitive_type, Program, flags >::run(
 //helper to interpolate between vertices:
 template< PrimitiveType p, class P, uint32_t F >
 auto Pipeline< p, P, F >::lerp(ShadedVertex const &a, ShadedVertex const &b, float t) -> ShadedVertex {
-	ShadedVertex ret;
-	ret.clip_position = (b.clip_position - a.clip_position) * t + a.clip_position;
-	for (uint32_t i = 0; i < ret.attributes.size(); ++i) {
-		ret.attributes[i] = (b.attributes[i] - a.attributes[i]) * t + a.attributes[i];
-	}
-	return ret;
+    ShadedVertex ret;
+    float w_a = 1.0f / a.clip_position.w;
+    float w_b = 1.0f / b.clip_position.w;
+    float w_interp = (w_b - w_a) * t + w_a;
+
+    // Interpolating positions
+    ret.clip_position = (b.clip_position - a.clip_position) * t + a.clip_position;
+
+    // Interpolating attributes with perspective correction
+    for (uint32_t i = 0; i < ret.attributes.size(); ++i) {
+        float attr_a = a.attributes[i] * w_a;
+        float attr_b = b.attributes[i] * w_b;
+        ret.attributes[i] = ((attr_b - attr_a) * t + attr_a) / w_interp;
+    }
+    return ret;
 }
 
 /*
