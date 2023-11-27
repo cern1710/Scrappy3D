@@ -184,7 +184,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::bisect_edge(EdgeRef e) {
 	t2->vertex = vm;
 	t2->edge = e;
 	t2->face = t->face;
-	
+
 	h->twin = t2;
 	h->next = h2;
 	assert(h->vertex == v1); // unchanged
@@ -221,7 +221,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::bisect_edge(EdgeRef e) {
  */
 std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	// A2L2 (REQUIRED): split_edge
-	
+
 	(void)e; //this line avoids 'unused parameter' warnings. You can delete it as you fill in the function.
     return std::nullopt;
 }
@@ -238,7 +238,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
  */
 std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::inset_vertex(FaceRef f) {
 	// A2Lx4 (OPTIONAL): inset vertex
-	
+
 	(void)f;
     return std::nullopt;
 }
@@ -331,10 +331,68 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
  */
 std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	//A2L1: Flip Edge
-	
-    return std::nullopt;
+	if(e->on_boundary())
+		return std::nullopt;	//cannot flip a boundary edge
+
+	// get two updated vertices
+	HalfedgeRef h1 = e->halfedge;
+	HalfedgeRef h2 = e->halfedge->twin;
+
+	auto h1_old_prev_opt = find_previous_halfedge(h1);
+	auto h2_old_prev_opt = find_previous_halfedge(h2);
+
+    if (!h1_old_prev_opt.has_value() || !h2_old_prev_opt.has_value())
+        return std::nullopt;	//if we cannot find the previous halfedges
+
+    //extract previous halfedges
+    HalfedgeRef h1_old_prev = *h1_old_prev_opt;
+    HalfedgeRef h2_old_prev = *h2_old_prev_opt;
+
+	//prepare 3 halfedges whose links will be changed (edge flip)
+	HalfedgeRef h1_new_prev = h2->next;
+	HalfedgeRef h2_new_prev = h1->next;
+	HalfedgeRef h1_new_next = h2_new_prev->next;
+	HalfedgeRef h2_new_next = h1_new_prev->next;
+
+	//update vertex halfedges
+	h1->vertex->halfedge = h1_new_prev;
+	h2->vertex->halfedge = h2_new_prev;
+	h1->vertex = h2->next->next->vertex;
+	h2->vertex = h1->next->next->vertex;
+
+	//reconnect halfedges
+	h1_old_prev->next = h1_new_prev;
+	h2_old_prev->next = h2_new_prev;
+	h1_new_prev->next = h1;
+	h2_new_prev->next = h2;
+	h1->next = h1_new_next;
+	h2->next = h2_new_next;
+
+	//update face-halfedges
+	h1_new_prev->face = h1->face;
+	h2_new_prev->face = h2->face;
+	h1->face->halfedge = h1;
+	h2->face->halfedge = h2;
+
+	return h1->edge;
 }
 
+/*
+ * find_previous_halfedge:
+ *  h: the halfedge in which we need to find the previous of
+ *
+ * if the next halfedge is equal to input, return current one
+ *
+ * if resulting mesh would be invalid, does nothing and returns std::nullopt
+ */
+std::optional<Halfedge_Mesh::HalfedgeRef> Halfedge_Mesh::find_previous_halfedge(HalfedgeRef h) {
+	HalfedgeRef iter;
+
+	for (iter = h->next; iter != h; iter = iter->next)
+		if(iter->next == h)
+			return iter;
+	return std::nullopt;
+}
 
 /*
  * make_boundary: add non-boundary face to boundary
@@ -377,7 +435,7 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::dissolve_edge(EdgeRef e) {
 	// A2Lx2 (OPTIONAL): dissolve_edge
 
 	//Reminder: use interpolate_data() to merge corner_uv / corner_normal data
-	
+
     return std::nullopt;
 }
 
@@ -392,7 +450,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 	//Reminder: use interpolate_data() to merge corner_uv / corner_normal data on halfedges
 	// (also works for bone_weights data on vertices!)
-	
+
     return std::nullopt;
 }
 
@@ -451,11 +509,11 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::weld_edges(EdgeRef e, EdgeR
  */
 void Halfedge_Mesh::bevel_positions(FaceRef face, std::vector<Vec3> const &start_positions, Vec3 direction, float distance) {
 	//A2Lx5h / A2Lx6h (OPTIONAL): Bevel Positions Helper
-	
+
 	// The basic strategy here is to loop over the list of outgoing halfedges,
 	// and use the preceding and next vertex position from the original mesh
 	// (in the start_positions array) to compute an new vertex position.
-	
+
 }
 
 /*
@@ -474,7 +532,7 @@ void Halfedge_Mesh::bevel_positions(FaceRef face, std::vector<Vec3> const &start
  *
  * Using extrude face in the GUI will assume a shrink of 0 to only extrude the selected face
  * Using bevel face in the GUI will allow you to shrink and increase the size of the selected face
- * 
+ *
  * see also [BEVEL NOTE] above.
  */
 void Halfedge_Mesh::extrude_positions(FaceRef face, Vec3 move, float shrink) {
@@ -484,6 +542,6 @@ void Halfedge_Mesh::extrude_positions(FaceRef face, Vec3 move, float shrink) {
 	// use mesh navigation to get starting positions from the surrounding faces,
 	// compute the centroid from these positions + use to shrink,
 	// offset by move
-	
+
 }
 

@@ -110,9 +110,11 @@ public:
 	//rotate non-boundary edge counter-clockwise
 	std::optional<EdgeRef> flip_edge(EdgeRef e);
 
+	//iterates through all following halfedges to find edge before current
+	std::optional<HalfedgeRef> find_previous_halfedge(HalfedgeRef h);
+
 	//turn a non-boundary face into a boundary face
 	std::optional<FaceRef> make_boundary(FaceRef f);
-
 
 	//--- unification ---
 
@@ -315,12 +317,12 @@ public:
 	};
 
 	//--- data management ---
-	
+
 	//interpolate_data:
 	// sets the extra data on an element reference by mixing together data
 	// from a list of element references. Useful when merging, splitting,
 	// collapsing, or adding elements.
-	
+
 	// VertexRef version sets bone_weights:
 	static void interpolate_data(std::vector< VertexCRef > const &from, VertexRef to);
 	// HalfedgeRef version sets corner_uv and corner_normal:
@@ -447,7 +449,7 @@ public:
 	Halfedge_Mesh(const Halfedge_Mesh& src) = delete;
 	void operator=(const Halfedge_Mesh& src) = delete;
 
-	
+
 	//--- generic element helpers used by the gui ---
 
 
@@ -464,7 +466,7 @@ public:
 	static ElementCRef const_from(ElementRef elem);
 
 private:
-	
+
 	//a fresh element id; assigned + incremented by emplace_*() functions:
 	uint32_t next_id = 0;
 
